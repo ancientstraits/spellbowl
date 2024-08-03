@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spell Bowl</title>
+</head>
+<body>
+
+<form id="range-select">
+    Practice words from <input type="number" name="first" /> to <input type="number" name="last" />
+    <input type="submit" />
+</form>
+
+<div id="practice" style="display:none">
+    <button id="play">Play Sound</button>
+    <input type="text" id="guess" autocomplete="off" autocapitalize="off" autocorrect="off"></input>
+    <button id="check">Check</button>
+    <p id="status"></p>
+</div>
+
+<script type="module">
+const $ = document.querySelector.bind(document)
+
+const data_resp = await fetch('/data/data.json')
+const data = await data_resp.json()
+
+// const audio = new Audio('/data/words.mp3')
+
+const rand_data = (first, last) => data[parseInt((last - first + 1)*Math.random() + first - 1)]
+
+function random_shuffle(arr) {
+    let idx = arr.length
+    while (idx > 0) {
+        const rand = parseInt(idx*Math.random())
+        idx--
+
+        const temp = arr[rand]
+        arr[rand] = arr[idx]
+        arr[idx]  = temp
+    }
+
+    return arr
+}
+
+$('#range-select').addEventListener('submit', (e) => {
+    e.preventDefault()
+
+    const first = parseInt(e.target.first.value)
+    const last  = parseInt(e.target.last.value)
+    if (last <= first) {
+        console.error('bruh')
+        return false
+    }
+
+    const arr = random_shuffle(data.slice(first - 1, last))
+    // console.log(data.slice(first - 1, last).map(data => data.word))
+    // console.log(arr.map(data => data.word))
+
+    $('#range-select').style.display = 'none'
+    $('#practice').style.display = ''
+    setWord(arr, last - first + 1)
+
+    return false
+})
+
+function setWord(arr, n) {
+    $('#guess').focus()
+
+    if (arr.length == 0) {
+        console.log('Finished!')
+        return
+    }
+
+    const rd = arr.pop()
+    // console.log(arr)
+    // audio.currentTime = rd.start
+    const audio = new Audio(rd.audio)
+    // audio.ontimeupdate = () => {
+    //     if (audio.currentTime >= rd.end) {
+    //         audio.pause()
+    //         audio.currentTime = rd.start
+    //     }
+    // }
+
+    $('#play').onclick = async () => {
+        await audio.play()
+    }
+
+    $('#check').onclick = () => {
+        if ($('#guess').value == rd.word) {
+            $('#status').innerHTML = `good!\n${n-arr.length} out of ${n} words completed`
+            setWord(arr, n)
+        } else {
+            $('#status').innerHTML = 'oops!'
+            $('#guess').focus()
+        }
+        $('#guess').value = ''
+    }
+}
+
+</script>
+</body>
+</html>
