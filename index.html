@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spell Bowl</title>
+
+    <style>
+        * {
+            font-size: x-large;
+        }
+    </style>
 </head>
 <body>
 
@@ -22,7 +28,7 @@
 <script type="module">
 const $ = document.querySelector.bind(document)
 
-const data_resp = await fetch('/data/data.json')
+const data_resp = await fetch(window.location.pathname + '/data/data.json')
 const data = await data_resp.json()
 
 // const audio = new Audio('/data/words.mp3')
@@ -75,7 +81,7 @@ function setWord(arr, n) {
     const rd = arr.pop()
     // console.log(arr)
     // audio.currentTime = rd.start
-    const audio = new Audio(rd.audio)
+    const audio = new Audio(window.location.pathname + rd.audio)
     // audio.ontimeupdate = () => {
     //     if (audio.currentTime >= rd.end) {
     //         audio.pause()
