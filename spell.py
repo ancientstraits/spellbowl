@@ -51,7 +51,11 @@ def save_word_from_mw(soup, save_path):
     # word = word.replace(' ', '%20')
     # html = requests.get(f'https://www.merriam-webster.com/dictionary/{word}').text
     # soup = BeautifulSoup(html, features='lxml')
-    href = soup.find_all('a', class_='play-pron-v2')[0]['href']
+    play_inst = soup.find_all('a', class_='play-pron-v2')
+    if len(play_inst) == 0:
+        print('Could not find audio file for word')
+        return
+    href = play_inst[0]['href']
     params = parse_qs(urlparse(href).query)
     sound_url = f'https://media.merriam-webster.com/audio/prons/en/us/mp3/{params['dir'][0]}/{params['file'][0]}.mp3'
     urlretrieve(sound_url, save_path)
@@ -59,18 +63,39 @@ def save_word_from_mw(soup, save_path):
 def get_definitions(soup):
     defs = []
     for dt_text in soup.find_all('span', class_='dtText'):
-        defs += list(filter(lambda x: x.name is None, dt_text.children))
+        # ':2' is because each span has a ': ' at the start
+        defs.append(dt_text.text[:2])
     for i in range(len(defs)):
         defs[i] = re.sub(r'^\s*', '', defs[i])
         defs[i] = re.sub(r'\s*$', '', defs[i])
-    return defs
+
+    return defs    
 
 words = get_word_list('spell.pdf')
 
 # print(words[321])
 # word = words[321].replace(' ', '%20')
-# html = requests.get(f'https://www.merriam-webster.com/dictionary/{word}').text
-# soup = BeautifulSoup(html, features='lxml')
+# for i, word in enumerate(words):
+#     print(i+1)
+#     word = word.replace(' ', '%20')
+#     print(word)
+#     html = requests.get(f'https://www.merriam-webster.com/dictionary/{word}').text
+#     soup = BeautifulSoup(html, features='html.parser')
+#     save_word_from_mw(soup, f'data/mw-pronunciations/{i+1}.mp3')
+defs = []
+for i, word in enumerate(words):
+    print(i+1)
+    word = word.replace(' ', '%20')
+    print(word)
+    html = requests.get(f'https://www.merriam-webster.com/dictionary/{word}').text
+    soup = BeautifulSoup(html, features='html.parser')
+
+    d = get_definitions(soup)
+    if len(d) == 0:
+        print('Could not get definition')
+        defs.append(None)
+    else:
+        defs.append(d)
 # print(get_definitions(soup))
 
 # for w in get_word_list('spell.pdf'):
@@ -92,7 +117,8 @@ for i, word in enumerate(words):
         'audio': f'data/pronunciations/{i+1}.mp3',
         'word': unidecode(word), # to remove accents from the word
         'start': prev,
-        'end': times[i]
+        'end': times[i],
+        'definitions': defs[i]
     })
     prev = times[i]
 

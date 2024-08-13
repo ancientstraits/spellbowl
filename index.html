@@ -9,26 +9,41 @@
         * {
             font-size: x-large;
         }
+
+        #progress-bar {
+            height: 30px;
+            background-color: black;
+        }
+        #progress-bar > div {
+            background-color: green;
+            width: 0%;
+            height: 100%;
+        }
     </style>
 </head>
 <body>
 
-<form id="range-select">
-    Practice words from <input type="number" name="first" /> to <input type="number" name="last" />
-    <input type="submit" />
-</form>
+<div id="range-select">
+    Practice words from <input type="number" id="range-first" /> to <input type="number" id="range-last" />
+    <button>Begin Practice</button>
+</div>
 
 <div id="practice" style="display:none">
+    <div id="progress-bar">
+        <div></div>
+    </div>
     <button id="play">Play Sound</button>
     <input type="text" id="guess" autocomplete="off" autocapitalize="off" autocorrect="off"></input>
     <button id="check">Check</button>
+    <ul id="definitions"></ul>
     <p id="status"></p>
 </div>
 
 <script type="module">
 const $ = document.querySelector.bind(document)
 
-const data_resp = await fetch(window.location.pathname + '/data/data.json')
+console.log(window.location.origin + '/data/data.json')
+const data_resp = await fetch(window.location.origin + '/data/data.json')
 const data = await data_resp.json()
 
 // const audio = new Audio('/data/words.mp3')
@@ -49,11 +64,9 @@ function random_shuffle(arr) {
     return arr
 }
 
-$('#range-select').addEventListener('submit', (e) => {
-    e.preventDefault()
-
-    const first = parseInt(e.target.first.value)
-    const last  = parseInt(e.target.last.value)
+$('#range-select > button').addEventListener('click', (e) => {
+    const first = parseInt($('#range-first').value)
+    const last  = parseInt($('#range-last' ).value)
     if (last <= first) {
         console.error('bruh')
         return false
@@ -89,6 +102,13 @@ function setWord(arr, n) {
     //     }
     // }
 
+    $('#definitions').innerHTML = ''
+    $('#definitions').append(...rd.definitions.map(d => {
+        const li = document.createElement('li')
+        li.textContent = d
+        return li
+    }))
+
     $('#play').onclick = async () => {
         await audio.play()
     }
@@ -96,6 +116,7 @@ function setWord(arr, n) {
     $('#check').onclick = () => {
         if ($('#guess').value == rd.word) {
             $('#status').innerHTML = `good!\n${n-arr.length} out of ${n} words completed`
+            $('#progress-bar > div').style.width = `${100*(n-arr.length)/n}%`
             setWord(arr, n)
         } else {
             $('#status').innerHTML = 'oops!'
