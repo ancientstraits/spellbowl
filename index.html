@@ -42,8 +42,7 @@
 <script type="module">
 const $ = document.querySelector.bind(document)
 
-console.log(window.location.origin + '/data/data.json')
-const data_resp = await fetch(window.location.origin + '/data/data.json')
+const data_resp = await fetch(window.location.href + 'data/data.json')
 const data = await data_resp.json()
 
 // const audio = new Audio('/data/words.mp3')
