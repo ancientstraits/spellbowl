@@ -57,19 +57,46 @@ def save_word_from_mw(soup, save_path):
         return
     href = play_inst[0]['href']
     params = parse_qs(urlparse(href).query)
+    # sound_dir = params['dir'][0]
+    # sound_file = params['file'][0]
     sound_url = f'https://media.merriam-webster.com/audio/prons/en/us/mp3/{params['dir'][0]}/{params['file'][0]}.mp3'
     urlretrieve(sound_url, save_path)
 
-def get_definitions(soup):
+def get_definitions(word):
+    word = word.replace(' ', '%20')
+
+    dapi_resp = requests.get(f'https://api.dictionaryapi.dev/api/v2/entries/en/{word}')
+
+    if dapi_resp.status_code == 404:
+        print('word not found with dictionaryapi.dev, using Merriam-Webster')
+        html = requests.get(f'https://www.merriam-webster.com/dictionary/{word}').text
+        soup = BeautifulSoup(html, features='html.parser')
+        return get_mw_definitions(soup)
+    else:
+        dapi_json = json.loads(dapi_resp.text)
+        defs = []
+        for meaning in dapi_json[0]['meanings']:
+            for definition in meaning['definitions']:
+                defs.append(definition['definition'])
+        return defs
+
+
+def get_mw_definitions(soup):
     defs = []
     for dt_text in soup.find_all('span', class_='dtText'):
         # ':2' is because each span has a ': ' at the start
-        defs.append(dt_text.text[:2])
+        defs.append(dt_text.text[2:])
+
+    if len(defs) == 0:
+        for un_text in soup.find_all('span', class_='unText'):
+            defs.append(un_text.text[2:])    
+
     for i in range(len(defs)):
         defs[i] = re.sub(r'^\s*', '', defs[i])
         defs[i] = re.sub(r'\s*$', '', defs[i])
+        defs[i] = defs[i].replace(' : ', '; ')
 
-    return defs    
+    return defs
 
 words = get_word_list('spell.pdf')
 
@@ -87,15 +114,20 @@ for i, word in enumerate(words):
     print(i+1)
     word = word.replace(' ', '%20')
     print(word)
-    html = requests.get(f'https://www.merriam-webster.com/dictionary/{word}').text
-    soup = BeautifulSoup(html, features='html.parser')
+    # html = requests.get(f'https://www.merriam-webster.com/dictionary/{word}').text
+    # soup = BeautifulSoup(html, features='html.parser')
 
-    d = get_definitions(soup)
+    # d = get_mw_definitions(soup)
+    d = get_definitions(word)
     if len(d) == 0:
         print('Could not get definition')
         defs.append(None)
     else:
         defs.append(d)
+        # gTTS(d[0]).save(f'data/definitions/{i+1}.mp3')
+    print('\t' + d[0])
+    print('\n\n')
+
 # print(get_definitions(soup))
 
 # for w in get_word_list('spell.pdf'):
@@ -115,6 +147,7 @@ prev = 0
 for i, word in enumerate(words):
     data.append({
         'audio': f'data/pronunciations/{i+1}.mp3',
+        'defAudio': f'data/defintions/{i+1}.mp3',
         'word': unidecode(word), # to remove accents from the word
         'start': prev,
         'end': times[i],

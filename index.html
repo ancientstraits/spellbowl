@@ -8,33 +8,103 @@
     <style>
         * {
             font-size: x-large;
+            font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+        }
+
+        #range-select, #practice {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            flex-direction: column;
+            height: 100%;
+        }
+        #range-select > h1 {
+            padding: 0;
+            margin: 0;
+        }
+        #range-first, #range-last {
+            width: 80px;
+        }
+
+        @keyframes correct {
+            from {background-color: green;}
+            to {background-color: white;}
+        }
+        @keyframes incorrect {
+            from {background-color: red;}
+            to {background-color: white;}
+        }
+        .correct {
+            /* animation: correct 1s 1; */
+            background-color: red;
+        }
+        .incorrect {
+            /* animation: incorrect 1s 1; */
+            background-color: white;
+        }
+
+        #definitions {
+            text-align: left;
+            width: 50%;
+        }
+
+        #progress-display {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            padding-bottom: 20px;
+
+            position: absolute;
+            top: 10px;
+            width: 80%;
+        }
+        #progress-status {
+            padding: 0 20px;
+            background-color: #AAA;
         }
 
         #progress-bar {
-            height: 30px;
+            flex-grow: 1;
             background-color: black;
         }
         #progress-bar > div {
             background-color: green;
             width: 0%;
             height: 100%;
+            transition: width 0.5s;
         }
     </style>
 </head>
 <body>
 
-<div id="range-select">
-    Practice words from <input type="number" id="range-first" /> to <input type="number" id="range-last" />
-    <button>Begin Practice</button>
-</div>
+<form id="range-select">
+    <h1>Spell Bowl</h1>
+    <p>
+        Practice words from <input type="number" id="range-first" required /> to <input type="number" id="range-last" required />
+    </p>
+    <input type="submit" value="Begin practice" />
+</form>
 
 <div id="practice" style="display:none">
-    <div id="progress-bar">
-        <div></div>
+    <div id="progress-display">
+        <div id="progress-bar">
+            <div></div>
+        </div>
+        <div id="progress-status">10/20</div>
     </div>
-    <button id="play">Play Sound</button>
-    <input type="text" id="guess" autocomplete="off" autocapitalize="off" autocorrect="off"></input>
-    <button id="check">Check</button>
+    <div id="controls">
+        <button id="play">Play Sound</button>
+        <input type="text" id="guess" autocomplete="off" autocapitalize="off" autocorrect="off"></input>
+        <button id="check">Check</button>
+    </div>
+
     <ul id="definitions"></ul>
     <p id="status"></p>
 </div>
@@ -63,7 +133,9 @@ function random_shuffle(arr) {
     return arr
 }
 
-$('#range-select > button').addEventListener('click', (e) => {
+$('#range-select').addEventListener('submit', (e) => {
+    e.preventDefault()
+
     const first = parseInt($('#range-first').value)
     const last  = parseInt($('#range-last' ).value)
     if (last <= first) {
@@ -82,8 +154,18 @@ $('#range-select > button').addEventListener('click', (e) => {
     return false
 })
 
+function flash(elem, animName) {
+    elem.style.animation = `${animName} 1s 1`
+
+    elem.offsetHeight // "CSS reflow"??
+
+    elem.style.animation = ''
+}
+
 function setWord(arr, n) {
     $('#guess').focus()
+
+    $('#progress-status').textContent = `${n-arr.length}/${n}`
 
     if (arr.length == 0) {
         console.log('Finished!')
@@ -94,6 +176,7 @@ function setWord(arr, n) {
     // console.log(arr)
     // audio.currentTime = rd.start
     const audio = new Audio(window.location.pathname + rd.audio)
+    audio.play()
     // audio.ontimeupdate = () => {
     //     if (audio.currentTime >= rd.end) {
     //         audio.pause()
@@ -101,27 +184,49 @@ function setWord(arr, n) {
     //     }
     // }
 
+    const def = [rd.definitions[0]]
+
     $('#definitions').innerHTML = ''
-    $('#definitions').append(...rd.definitions.map(d => {
+    $('#definitions').append(...def.map(d => {
         const li = document.createElement('li')
         li.textContent = d
         return li
     }))
 
     $('#play').onclick = async () => {
-        await audio.play()
+        flash($('#guess'), 'incorrect')
+        // await audio.play()
+        $('#guess').focus()
+        audio.play()
     }
 
-    $('#check').onclick = () => {
+    let incorrectAttempts = 0
+
+    const check = () => {
         if ($('#guess').value == rd.word) {
+            flash($('#guess'), 'correct')
+
             $('#status').innerHTML = `good!\n${n-arr.length} out of ${n} words completed`
             $('#progress-bar > div').style.width = `${100*(n-arr.length)/n}%`
             setWord(arr, n)
         } else {
-            $('#status').innerHTML = 'oops!'
+            flash($('#guess'), 'incorrect')
+            audio.play()
+
+            incorrectAttempts += 1
+            if (incorrectAttempts >= 3) {
+                $('#status').innerHTML = `The word is <b>${rd.word}</b>`
+            } else {
+                $('#status').innerHTML = `oops! ${3 - incorrectAttempts} attempts left before correct answer is shown`
+            }
             $('#guess').focus()
         }
         $('#guess').value = ''
+        $('#guess').focus()
+    }
+    $('#check').onclick = check
+    document.body.onkeydown = (e) => {
+        if (e.key == 'Enter') check()
     }
 }
 
