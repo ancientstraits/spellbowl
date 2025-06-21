@@ -67,12 +67,13 @@ def get_definitions(word):
 
     dapi_resp = requests.get(f'https://api.dictionaryapi.dev/api/v2/entries/en/{word}')
 
-    if dapi_resp.status_code == 404:
+    if dapi_resp.status_code == 404 or dapi_resp.status_code == 429:
         print('word not found with dictionaryapi.dev, using Merriam-Webster')
         html = requests.get(f'https://www.merriam-webster.com/dictionary/{word}').text
         soup = BeautifulSoup(html, features='html.parser')
         return get_mw_definitions(soup)
     else:
+        print(dapi_resp)
         dapi_json = json.loads(dapi_resp.text)
         defs = []
         for meaning in dapi_json[0]['meanings']:
@@ -109,51 +110,51 @@ words = get_word_list('spell.pdf')
 #     html = requests.get(f'https://www.merriam-webster.com/dictionary/{word}').text
 #     soup = BeautifulSoup(html, features='html.parser')
 #     save_word_from_mw(soup, f'data/mw-pronunciations/{i+1}.mp3')
-defs = []
-for i, word in enumerate(words):
-    print(i+1)
-    word = word.replace(' ', '%20')
-    print(word)
-    # html = requests.get(f'https://www.merriam-webster.com/dictionary/{word}').text
-    # soup = BeautifulSoup(html, features='html.parser')
+# defs = []
+# for i, word in enumerate(words):
+#     print(i+1)
+#     word = word.replace(' ', '%20')
+#     print(word)
+#     # html = requests.get(f'https://www.merriam-webster.com/dictionary/{word}').text
+#     # soup = BeautifulSoup(html, features='html.parser')
 
-    # d = get_mw_definitions(soup)
-    d = get_definitions(word)
-    if len(d) == 0:
-        print('Could not get definition')
-        defs.append(None)
-    else:
-        defs.append(d)
-        # gTTS(d[0]).save(f'data/definitions/{i+1}.mp3')
-    print('\t' + d[0])
-    print('\n\n')
+#     # d = get_mw_definitions(soup)
+#     d = get_definitions(word)
+#     if len(d) == 0:
+#         print('Could not get definition')
+#         defs.append(None)
+#     else:
+#         defs.append(d)
+#         # gTTS(d[0]).save(f'data/definitions/{i+1}.mp3')
+#         print('\t' + d[0])
+#     print('\n\n')
 
 # print(get_definitions(soup))
 
 # for w in get_word_list('spell.pdf'):
 #     print(w)
 
-# for i, word in enumerate(words):
-#     gTTS(word).save(f'data/pronunciations/{i+1}.mp3')
-#     print(i)
-
-with open('times', 'r') as f:
-    times = f.readlines()
-
-times = list(map(lambda x: float(x), times))
-
-data = []
-prev = 0
 for i, word in enumerate(words):
-    data.append({
-        'audio': f'data/pronunciations/{i+1}.mp3',
-        'defAudio': f'data/defintions/{i+1}.mp3',
-        'word': unidecode(word), # to remove accents from the word
-        'start': prev,
-        'end': times[i],
-        'definitions': defs[i]
-    })
-    prev = times[i]
+    gTTS(word, lang="en-us").save(f'data/pronunciations/{i+1}.mp3')
+    print(i)
 
-with open('data/data.json', 'wb') as f:
-    f.write(json.dumps(data).encode('utf-8'))
+# with open('times', 'r') as f:
+#     times = f.readlines()
+
+# times = list(map(lambda x: float(x), times))
+
+# data = []
+# prev = 0
+# for i, word in enumerate(words):
+#     data.append({
+#         'audio': f'data/pronunciations/{i+1}.mp3',
+#         'defAudio': f'data/defintions/{i+1}.mp3',
+#         'word': unidecode(word), # to remove accents from the word
+#         # 'start': prev,
+#         # 'end': times[i],
+#         'definitions': defs[i]
+#     })
+#     # prev = times[i]
+
+# with open('data/data.json', 'wb') as f:
+#     f.write(json.dumps(data).encode('utf-8'))
